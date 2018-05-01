@@ -1,7 +1,8 @@
 module Sub exposing (subscriptions)
 
-import Bright 
+import Bright
 import Decoder exposing (decodeMessage)
 
+
 subscriptions model =
-  Bright.inPort decodeMessage
+    Bright.inPort decodeMessage

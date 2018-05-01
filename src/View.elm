@@ -13,6 +13,7 @@ import Element.Input as Input
 import Element.Attributes exposing (..)
 import Element.Events exposing (..)
 
+
 type Styles
     = None
     | Main
@@ -21,11 +22,14 @@ type Styles
     | Title
     | Peer
 
+
 type Variations
     = Connected
 
+
 navbarColor =
     Color.rgb 233 240 248
+
 
 textColor =
     Color.rgb 81 81 81
@@ -34,11 +38,13 @@ textColor =
 titleColor =
     Color.rgb 35 107 188
 
+
 ubuntuFont =
     Font.importUrl
         { url = "https://fonts.googleapis.com/css?family=Ubuntu:400,700"
         , name = "Ubuntu"
         }
+
 
 stylesheet =
     Style.styleSheet
@@ -62,43 +68,44 @@ stylesheet =
             , Color.border navbarColor
             ]
         , style Peer
-            [ variation Connected 
-              [  Font.bold 
-              ]
+            [ variation Connected
+                [ Font.bold
+                ]
             ]
         ]
+
 
 view : Model -> Html Msg
 view model =
     Element.viewport stylesheet <|
         column None
-          [ height <| fill
-          ]
-          [ row
-              Navbar
+            [ height <| fill
+            ]
+            [ row
+                Navbar
                 [ width <| fill
                 , padding 20
                 ]
                 [ el Title
-                  []
-                  (text model.instanceUri)
-
+                    []
+                    (text model.instanceUri)
                 ]
-          , row None
+            , row None
                 [ width <| fill
                 , height <| fill
                 , scrollbars
                 ]
                 [ content model, sidebar model ]
-          ]
+            ]
+
 
 sidebar model =
     column None
         [ padding 10
         , spacing 10
         ]
-        ( peers model.peers
-        )
+        (peers model.peers)
+
 
 content model =
     column Content
@@ -110,18 +117,18 @@ content model =
 
 
 peers =
-  List.map
-    (\(peer, connected) ->
-      let
-          action =
-            if connected then
-              DisconnectPeer
-            else
-              Signal
-      in
-        row Peer
-          [ onClick (action peer) 
-          , vary Connected connected
-          ]
-          [ text peer ]
-    )
+    List.map
+        (\( peer, connected ) ->
+            let
+                action =
+                    if connected then
+                        DisconnectPeer
+                    else
+                        Signal
+            in
+                row Peer
+                    [ onClick (action peer)
+                    , vary Connected connected
+                    ]
+                    [ text peer ]
+        )

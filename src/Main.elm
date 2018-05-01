@@ -9,7 +9,7 @@ import Html
 
 init instanceUri =
     State.init instanceUri
-        ! [ ]
+        ! []
 
 
 main : Program String Types.Model Types.Msg
