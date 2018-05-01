@@ -1,0 +1,7 @@
+elm-stuff
+*.swp
+*.swo
+node_modules
+.vimrc
+dist
+
