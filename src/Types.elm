@@ -7,11 +7,14 @@ type alias Model =
 
 
 type alias Peer = 
-  String
+  (String, Bool)
 
 
 type Msg = 
   Peer String
   | RemovePeer String
-  | Connect String
+  | DisconnectPeer String
+  | NowDisconnectPeer String
+  | Signal String
+  | ConnectPeer String
   | Error String

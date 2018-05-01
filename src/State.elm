@@ -3,6 +3,7 @@ module State exposing (..)
 import Types exposing (..)
 import Encoder exposing (..)
 import Bright
+import Tuple exposing (..)
 
 init : String -> Model
 init instanceUri =
@@ -13,19 +14,32 @@ init instanceUri =
 
 update : Msg -> Model -> (Model, Cmd Msg) 
 update msg model =
-  case msg of
-    Connect peer ->
+  case Debug.log "msg" msg of
+    Signal peer ->
       model !
-      [ encodePeer peer
+      [ encodeSignal peer
         |> Bright.outPort
       ]
+    ConnectPeer peer ->
+      { model
+        | peers = List.map (\(p,c) -> if peer == p then (p, True) else (p, c)) model.peers
+      } ! []
+    DisconnectPeer peer ->
+      model !
+      [ encodeDisconnectPeer peer
+        |> Bright.outPort
+      ]
+    NowDisconnectPeer peer ->
+      { model
+        | peers = List.map (\(p,c) -> if peer == p then (p, False) else (p, c)) model.peers
+      } ! []
     Peer peer ->
       { model
-        | peers = peer :: model.peers
+        | peers = (peer, False) :: model.peers
       } ! []
     RemovePeer peer ->
       { model
-        | peers = List.filter ((/=) peer) model.peers
+        | peers = List.filter (first >> (/=) peer) model.peers
       } ! []
     Error err ->
       model ! []

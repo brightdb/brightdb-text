@@ -2,6 +2,15 @@ module Encoder exposing (..)
 
 import Json.Encode exposing (..)
 
-encodePeer : String -> Value
-encodePeer peer =
-  string peer
+encodeSignal : String -> Value
+encodeSignal peer =
+  [ ("type", string "signal") 
+  , ("peer", string peer)
+  ] |> object
+
+
+encodeDisconnectPeer : String -> Value
+encodeDisconnectPeer peer =
+  [ ("type", string "disconnect_peer") 
+  , ("peer", string peer)
+  ] |> object

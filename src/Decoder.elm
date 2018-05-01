@@ -23,6 +23,12 @@ message =
           "remove_peer" ->
             field "uri" string
             |> map RemovePeer
+          "disconnect_peer" ->
+            field "uri" string
+            |> map NowDisconnectPeer
+          "connect" ->
+            field "peer" string
+            |> map ConnectPeer
           _ ->
             "unknown type " ++ type_
             |> fail

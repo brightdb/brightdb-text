@@ -22,7 +22,7 @@ type Styles
     | Peer
 
 type Variations
-    = Greyed
+    = Connected
 
 navbarColor =
     Color.rgb 233 240 248
@@ -61,6 +61,11 @@ stylesheet =
             , Border.solid
             , Color.border navbarColor
             ]
+        , style Peer
+            [ variation Connected 
+              [  Font.bold 
+              ]
+            ]
         ]
 
 view : Model -> Html Msg
@@ -74,7 +79,10 @@ view model =
                 [ width <| fill
                 , padding 20
                 ]
-                [ text "Demo"
+                [ el Title
+                  []
+                  (text model.instanceUri)
+
                 ]
           , row None
                 [ width <| fill
@@ -103,8 +111,17 @@ content model =
 
 peers =
   List.map
-    (\peer ->
-      row Peer
-        []
-        [ text peer ]
+    (\(peer, connected) ->
+      let
+          action =
+            if connected then
+              DisconnectPeer
+            else
+              Signal
+      in
+        row Peer
+          [ onClick (action peer) 
+          , vary Connected connected
+          ]
+          [ text peer ]
     )
