@@ -12,5 +12,5 @@ encodeSignal peer =
 encodeDisconnectPeer : String -> Value
 encodeDisconnectPeer peer =
   [ ("type", string "disconnect_peer") 
-  , ("peer", string peer)
+  , ("uri", string peer)
   ] |> object
