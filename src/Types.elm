@@ -12,5 +12,6 @@ type alias Peer =
 
 type Msg = 
   Peer String
+  | RemovePeer String
   | Connect String
   | Error String

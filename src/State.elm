@@ -23,5 +23,9 @@ update msg model =
       { model
         | peers = peer :: model.peers
       } ! []
+    RemovePeer peer ->
+      { model
+        | peers = List.filter ((/=) peer) model.peers
+      } ! []
     Error err ->
       model ! []

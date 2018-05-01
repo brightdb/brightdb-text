@@ -20,6 +20,9 @@ message =
           "peer" ->
             field "uri" string
             |> map Peer
+          "remove_peer" ->
+            field "uri" string
+            |> map RemovePeer
           _ ->
             "unknown type " ++ type_
             |> fail
