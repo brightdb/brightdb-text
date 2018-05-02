@@ -8,6 +8,7 @@ let instanceUri = dataspace + '/' + RandomName.first().toLowerCase()
 let app = Elm.Main.fullscreen(instanceUri)
 
 app.ports.outPort.subscribe(message => {
+  console.log(message)
   bright.message('app', message)
 })
 

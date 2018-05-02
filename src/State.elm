@@ -79,6 +79,15 @@ update msg model =
         Error err ->
             model ! []
 
+        Data peer ops ->
+            { model
+                | text = Sequence.apply ops model.text
+                , history =
+                    Array.fromList ops
+                        |> Array.append model.history
+            }
+                ! []
+
         Click path ->
             let
                 start =
@@ -126,4 +135,8 @@ update msg model =
                     , history = history
                     , cursor = cursor
                 }
-                    ! []
+                    ! (model.peers
+                        |> List.filter (second >> (==) True)
+                        |> List.map
+                            (first >> encodeData [ op ] >> Bright.outPort)
+                      )

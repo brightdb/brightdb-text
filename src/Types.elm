@@ -25,6 +25,7 @@ type Msg
     | NowDisconnectPeer String
     | Signal String
     | ConnectPeer String
+    | Data String (List (Op Char))
     | Error String
     | Click Path
     | ClickEnd
