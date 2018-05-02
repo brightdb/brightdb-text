@@ -21,6 +21,14 @@ init instanceUri =
     }
 
 
+initPeer : String -> Peer
+initPeer uri =
+    { uri = uri
+    , connected = False
+    , version = 0
+    }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case Debug.log "msg" msg of
@@ -31,18 +39,42 @@ update msg model =
                   ]
 
         ConnectPeer peer ->
-            { model
-                | peers =
-                    List.map
-                        (\( p, c ) ->
-                            if peer == p then
-                                ( p, True )
-                            else
-                                ( p, c )
+            let
+                ( peers, v ) =
+                    List.foldr
+                        (\peer_ ( peers, v ) ->
+                            case v of
+                                Just v ->
+                                    ( peer_ :: peers, Just v )
+
+                                Nothing ->
+                                    if peer_.uri == peer then
+                                        ( { peer_
+                                            | connected = True
+                                          }
+                                            :: peers
+                                        , Just peer_.version
+                                        )
+                                    else
+                                        ( peer_ :: peers, v )
                         )
+                        ( [], Nothing )
                         model.peers
-            }
-                ! []
+
+                cmd =
+                    case v of
+                        Nothing ->
+                            []
+
+                        Just v ->
+                            [ encodeData (encodeSubscription v "*") peer
+                                |> Bright.outPort
+                            ]
+            in
+                { model
+                    | peers = peers
+                }
+                    ! cmd
 
         DisconnectPeer peer ->
             model
@@ -54,39 +86,74 @@ update msg model =
             { model
                 | peers =
                     List.map
-                        (\( p, c ) ->
-                            if peer == p then
-                                ( p, False )
+                        (\p ->
+                            if peer == p.uri then
+                                { p
+                                    | connected = False
+                                }
                             else
-                                ( p, c )
+                                p
                         )
                         model.peers
             }
                 ! []
 
-        Peer peer ->
+        PeerAvailable peer ->
             { model
-                | peers = ( peer, False ) :: model.peers
+                | peers = initPeer peer :: model.peers
             }
                 ! []
 
         RemovePeer peer ->
             { model
-                | peers = List.filter (first >> (/=) peer) model.peers
+                | peers = List.filter (.uri >> (/=) peer) model.peers
             }
                 ! []
 
         Error err ->
             model ! []
 
-        Data peer ops ->
-            { model
-                | text = Sequence.apply ops model.text
-                , history =
-                    Array.fromList ops
-                        |> Array.append model.history
-            }
-                ! []
+        Data peer (Ops ops) ->
+            let
+                ( text, newOps ) =
+                    Sequence.apply ops model.text
+            in
+                { model
+                    | text = text
+                    , history =
+                        Array.fromList newOps
+                            |> Debug.log "newOps"
+                            |> Array.append model.history
+                    , peers =
+                        List.map
+                            (\peer_ ->
+                                if peer_.uri == peer then
+                                    { peer_
+                                        | version = peer_.version + List.length newOps
+                                    }
+                                else
+                                    peer_
+                            )
+                            model.peers
+                }
+                    ! []
+
+        Data peer (Subscribe subscription) ->
+            let
+                changes =
+                    Array.slice subscription.version (Array.length model.history) model.history
+                        |> Array.toList
+
+                cmd =
+                    if List.isEmpty changes then
+                        []
+                    else
+                        [ encodeData (encodeOps changes) peer
+                            |> Bright.outPort
+                        ]
+            in
+                model
+                    ! cmd
 
         Click path ->
             let
@@ -121,11 +188,12 @@ update msg model =
                     Char.fromCode key
                         |> Sequence.createInsert model.instanceUri path
 
-                history =
-                    Array.push op model.history
-
-                text =
+                ( text, newOps ) =
                     Sequence.apply [ op ] model.text
+
+                history =
+                    Array.fromList newOps
+                        |> Array.append model.history
 
                 cursor =
                     ( path, second model.cursor )
@@ -136,7 +204,7 @@ update msg model =
                     , cursor = cursor
                 }
                     ! (model.peers
-                        |> List.filter (second >> (==) True)
+                        |> List.filter (.connected >> (==) True)
                         |> List.map
-                            (first >> encodeData [ op ] >> Bright.outPort)
+                            (.uri >> encodeData (encodeOps [ op ]) >> Bright.outPort)
                       )

@@ -27,6 +27,7 @@ type Styles
     | Content
     | Title
     | Peer
+    | Version
 
 
 type Variations
@@ -35,6 +36,10 @@ type Variations
 
 navbarColor =
     Color.rgb 233 240 248
+
+
+connectedColor =
+    Color.rgb 233 248 234
 
 
 textColor =
@@ -74,9 +79,15 @@ stylesheet =
             , Color.border navbarColor
             ]
         , style Peer
-            [ variation Connected
+            [ cursor "pointer"
+            , variation Connected
                 [ Font.bold
+                , Color.background connectedColor
                 ]
+            ]
+        , style Version
+            [ Color.text Color.grey
+            , Font.size 10
             ]
         ]
 
@@ -84,7 +95,7 @@ stylesheet =
 view : Model -> Html Msg
 view model =
     Element.viewport stylesheet <|
-        column None
+        column Main
             [ height <| fill
             ]
             [ row
@@ -107,8 +118,7 @@ view model =
 
 sidebar model =
     column None
-        [ padding 10
-        , spacing 10
+        [ spacing 10
         ]
         (peers model.peers)
 
@@ -209,17 +219,27 @@ cursorAtEnd ( start, end ) lastPath =
 
 peers =
     List.map
-        (\( peer, connected ) ->
+        (\peer ->
             let
                 action =
-                    if connected then
+                    if peer.connected then
                         DisconnectPeer
                     else
                         Signal
             in
                 row Peer
-                    [ onClick (action peer)
-                    , vary Connected connected
+                    [ onClick (action peer.uri)
+                    , vary Connected peer.connected
+                    , padding 5
                     ]
-                    [ text peer ]
+                    [ column None
+                        []
+                        [ el None
+                            []
+                            (text peer.uri)
+                        , el Version
+                            []
+                            (text <| toString peer.version)
+                        ]
+                    ]
         )

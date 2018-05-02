@@ -24,7 +24,7 @@ message =
             case Debug.log "type" type_ of
                 "peer" ->
                     field "uri" string
-                        |> map Peer
+                        |> map PeerAvailable
 
                 "remove_peer" ->
                     field "uri" string
@@ -41,7 +41,7 @@ message =
                 "data" ->
                     map2 Data
                         (field "peer" string)
-                        (field "payload" decodeOps)
+                        (field "payload" decodePayload)
 
                 _ ->
                     "unknown type "
@@ -52,14 +52,58 @@ message =
             |> andThen body
 
 
-decodeOps : Decoder (List (Op Char))
-decodeOps =
+decodePayload : Decoder Payload
+decodePayload =
     string
-        |> andThen (String.split "|" >> List.map stringToOp >> resultToDecoder)
+        |> andThen
+            (\str ->
+                case String.uncons str of
+                    Just ( 'o', ops ) ->
+                        case stringToOps ops of
+                            Err err ->
+                                fail err
+
+                            Ok ops ->
+                                Ops ops
+                                    |> succeed
+
+                    Just ( 's', sub ) ->
+                        case stringToSubscription sub of
+                            Err err ->
+                                fail err
+
+                            Ok subscription ->
+                                Subscribe subscription
+                                    |> succeed
+
+                    _ ->
+                        fail "unknown payload"
+            )
 
 
-resultToDecoder : List (Result String (Op Char)) -> Decoder (List (Op Char))
-resultToDecoder result =
+stringToSubscription : String -> Result String Subscription
+stringToSubscription str =
+    case String.split "," str of
+        version :: address :: [] ->
+            case String.toInt version of
+                Ok version ->
+                    Subscription version address
+                        |> Ok
+
+                Err err ->
+                    Err err
+
+        _ ->
+            Err <| "cannot decode subscription " ++ str
+
+
+stringToOps : String -> Result String (List (Op Char))
+stringToOps =
+    String.split "|" >> List.map stringToOp >> resultListToResult
+
+
+resultListToResult : List (Result String (Op Char)) -> Result String (List (Op Char))
+resultListToResult result =
     let
         ( ops, errs ) =
             result
@@ -76,12 +120,12 @@ resultToDecoder result =
     in
         case ( ops, errs ) of
             ( ops, [] ) ->
-                succeed ops
+                Ok ops
 
             ( _, errs ) ->
                 List.intersperse ", " errs
                     |> String.concat
-                    |> fail
+                    |> Err
 
 
 stringToOp : String -> Result String (Op Char)

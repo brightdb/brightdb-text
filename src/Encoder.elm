@@ -22,11 +22,16 @@ encodeDisconnectPeer peer =
         |> object
 
 
-encodeData : List (Op Char) -> String -> Value
-encodeData ops peer =
+encodeSubscription : Int -> String -> Value
+encodeSubscription version address =
+    "s" ++ toString version ++ "," ++ address |> string
+
+
+encodeData : Value -> String -> Value
+encodeData payload peer =
     [ ( "type", string "data" )
     , ( "peer", string peer )
-    , ( "payload", encodeOps ops )
+    , ( "payload", payload )
     ]
         |> object
 
@@ -36,6 +41,7 @@ encodeOps ops =
     List.map opToString ops
         |> List.intersperse "|"
         |> String.concat
+        |> (++) "o"
         |> string
 
 

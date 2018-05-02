@@ -15,17 +15,31 @@ type alias Model =
 
 
 type alias Peer =
-    ( String, Bool )
+    { uri : String
+    , connected : Bool
+    , version : Int
+    }
+
+
+type alias Subscription =
+    { version : Int
+    , address : String
+    }
+
+
+type Payload
+    = Ops (List (Op Char))
+    | Subscribe Subscription
 
 
 type Msg
-    = Peer String
+    = PeerAvailable String
     | RemovePeer String
     | DisconnectPeer String
     | NowDisconnectPeer String
     | Signal String
     | ConnectPeer String
-    | Data String (List (Op Char))
+    | Data String Payload
     | Error String
     | Click Path
     | ClickEnd
