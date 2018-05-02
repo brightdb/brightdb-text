@@ -117,12 +117,20 @@ update msg model =
             let
                 ( text, newOps ) =
                     Sequence.apply ops model.text
+
+                cmd =
+                    if List.isEmpty newOps then
+                        []
+                    else
+                        model.peers
+                            |> List.filter (.connected >> (==) True)
+                            |> List.map
+                                (.uri >> encodeData (encodeOps newOps) >> Bright.outPort)
             in
                 { model
                     | text = text
                     , history =
                         Array.fromList newOps
-                            |> Debug.log "newOps"
                             |> Array.append model.history
                     , peers =
                         List.map
@@ -136,7 +144,7 @@ update msg model =
                             )
                             model.peers
                 }
-                    ! []
+                    ! cmd
 
         Data peer (Subscribe subscription) ->
             let

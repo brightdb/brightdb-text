@@ -119,6 +119,7 @@ view model =
 sidebar model =
     column None
         [ spacing 10
+        , width <| percent 20
         ]
         (peers model.peers)
 
@@ -233,13 +234,10 @@ peers =
                     , padding 5
                     ]
                     [ column None
-                        []
-                        [ el None
-                            []
-                            (text peer.uri)
-                        , el Version
-                            []
-                            (text <| toString peer.version)
-                        ]
+                        [ width <| percent 90 ]
+                        [ text peer.uri ]
+                    , column Version
+                        [ width <| percent 10 ]
+                        [ text <| toString peer.version ]
                     ]
         )
