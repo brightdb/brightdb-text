@@ -8,7 +8,15 @@ import Char
 import String
 import Array.Hamt as Array exposing (Array)
 import Sequence exposing (Sequence)
-import Random.Pcg exposing (minInt, maxInt)
+import Bitwise exposing (shiftLeftBy)
+
+
+maxInt =
+    shiftLeftBy 30 1
+
+
+minInt =
+    0
 
 
 init : String -> Model
