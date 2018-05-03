@@ -224,3 +224,32 @@ update msg model =
                         |> List.map
                             (.uri >> encodeData (encodeOps [ op ]) >> Bright.outPort)
                       )
+
+        KeyUp key ->
+            case key of
+                37 ->
+                    let
+                        next =
+                            Sequence.before (first model.cursor) model.text
+                                |> Maybe.map first
+                                |> Maybe.withDefault minInt
+                    in
+                        { model
+                            | cursor = ( next, first model.cursor )
+                        }
+                            ! []
+
+                39 ->
+                    let
+                        next =
+                            Sequence.after (second model.cursor) model.text
+                                |> Maybe.map first
+                                |> Maybe.withDefault maxInt
+                    in
+                        { model
+                            | cursor = ( second model.cursor, next )
+                        }
+                            ! []
+
+                _ ->
+                    model ! []

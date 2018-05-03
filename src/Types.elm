@@ -44,3 +44,4 @@ type Msg
     | Click Path
     | ClickEnd
     | Key Int
+    | KeyUp Int
