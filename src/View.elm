@@ -19,6 +19,7 @@ import Value exposing (Entry(..), Value(..))
 import Dict
 import Tuple exposing (..)
 import Json.Decode as Dec
+import List.Extra
 
 
 type Styles
@@ -123,7 +124,7 @@ sidebar model =
 
 
 content model =
-    Sequence.foldr (foldText model.cursor) [] model.text
+    Sequence.foldr (foldText model) [] model.text
         ++ cursorAtEnd model.cursor (Sequence.last model.text |> Maybe.map first)
         |> Html.div []
         |> Element.html
@@ -147,17 +148,18 @@ content model =
             ]
 
 
-foldText cursor_ path entry result =
-    entryToSpan cursor_ path entry
+foldText model path entry result =
+    entryToSpan model path entry
         ++ result
 
 
-entryToSpan cursor path entry =
+entryToSpan model path entry =
     case entry of
         Single origin (Value c) ->
             [ Html.span
                 [ Html.onClick <| Click path
-                , drawCursor cursor path
+                , peerTextStyle model.instanceUri model.peers entry
+                , drawCursor model.cursor path
                     |> Html.style
                 ]
                 [ String.fromChar c
@@ -172,7 +174,8 @@ entryToSpan cursor path entry =
                         { stopPropagation = True
                         , preventDefault = False
                         }
-                , drawCursor cursor path
+                , peerTextStyle model.instanceUri model.peers entry
+                , drawCursor model.cursor path
                     |> Html.style
                 ]
                 (Dict.values mvr
@@ -195,6 +198,55 @@ entryToSpan cursor path entry =
 
 cursorStyle =
     ( "border-left", "solid 1px black" )
+
+
+peerTextStyle instanceUri peers entry =
+    let
+        peerToColor origin =
+            if origin == instanceUri then
+                colorToCssRgba navbarColor
+            else
+                List.Extra.find (.uri >> (==) origin) peers
+                    |> Maybe.map (.color >> colorToCssRgba)
+                    |> Maybe.withDefault "#fff"
+    in
+        Html.style
+            [ ( "background"
+              , case entry of
+                    Single origin _ ->
+                        peerToColor origin
+
+                    Concurrent mvr ->
+                        let
+                            colors =
+                                Dict.keys mvr
+                                    |> List.map peerToColor
+
+                            len =
+                                List.length colors
+                                    |> Debug.log "len colors"
+
+                            gradient =
+                                colors
+                                    |> List.indexedMap
+                                        (\i color ->
+                                            color
+                                                ++ " "
+                                                ++ (toFloat i / toFloat len * 100 |> round |> toString)
+                                                ++ "%,"
+                                                ++ color
+                                                ++ " "
+                                                ++ (toFloat (i + 1) / toFloat len * 100 |> round |> toString)
+                                                ++ "%"
+                                        )
+                                    |> List.intersperse ","
+                                    |> String.concat
+                        in
+                            "linear-gradient(to bottom,"
+                                ++ gradient
+                                ++ ")"
+              )
+            ]
 
 
 drawCursor ( start, end ) path =
