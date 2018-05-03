@@ -110,7 +110,6 @@ view model =
             , row None
                 [ width <| fill
                 , height <| fill
-                , scrollbars
                 ]
                 [ content model, sidebar model ]
             ]
@@ -133,6 +132,7 @@ content model =
         |> column Content
             [ alignLeft
             , width <| fill
+            , padding 5
             , scrollbars
             , id "container"
             , on "click"
