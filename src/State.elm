@@ -7,9 +7,12 @@ import Tuple exposing (..)
 import Char
 import String
 import Array.Hamt as Array exposing (Array)
-import Sequence exposing (Sequence)
+import Sequence exposing (Sequence, Path)
+import Value exposing (Value(..), Entry(..))
 import Bitwise exposing (shiftLeftBy)
 import Color exposing (Color, hsl)
+import IntDict
+import Dict
 
 
 maxInt =
@@ -267,5 +270,71 @@ update msg model =
                         }
                             ! []
 
+                8 ->
+                    case IntDict.get (first model.cursor) model.text of
+                        Nothing ->
+                            model ! []
+
+                        Just entry ->
+                            delete ( first model.cursor, entry ) model
+
                 _ ->
                     model ! []
+
+
+delete : ( Path, Entry Char ) -> Model -> ( Model, Cmd Msg )
+delete ( path, entry ) model =
+    case getTarget entry of
+        Nothing ->
+            case Sequence.before path model.text of
+                Nothing ->
+                    model ! []
+
+                Just next ->
+                    delete next model
+
+        Just target ->
+            let
+                op =
+                    Sequence.createRemove model.instanceUri target path
+
+                ( text, newOps ) =
+                    Sequence.apply [ op ] model.text
+
+                history =
+                    Array.fromList newOps
+                        |> Array.append model.history
+            in
+                { model
+                    | text = text
+                    , history = history
+                }
+                    ! (model.peers
+                        |> List.filter (.connected >> (==) True)
+                        |> List.map
+                            (.uri >> encodeData (encodeOps [ op ]) >> Bright.outPort)
+                      )
+
+
+getTarget entry =
+    case entry of
+        Single origin (Value _) ->
+            Just origin
+
+        Concurrent mvr ->
+            Dict.toList mvr
+                |> List.filter
+                    (\( _, value ) ->
+                        case value of
+                            Value v ->
+                                True
+
+                            _ ->
+                                False
+                    )
+                |> List.reverse
+                |> List.head
+                |> Maybe.map first
+
+        _ ->
+            Nothing
