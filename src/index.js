@@ -3,7 +3,7 @@ import Bright from '../../brightdb/src/Bright.js'
 import RandomName from 'random-name'
 
 let bright = new Bright(WebSocket)
-let dataspace = 'local.pisys.eu'
+let dataspace = 'ds1.pisys.eu'
 let instanceUri = dataspace + '/' + RandomName.first().toLowerCase()
 let app = Elm.Main.fullscreen(instanceUri)
 
