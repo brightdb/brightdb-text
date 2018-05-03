@@ -119,6 +119,8 @@ view model =
 sidebar model =
     column None
         [ width <| percent 20
+        , minWidth <| px 200
+        , scrollbars
         ]
         (peers model.peers)
 
