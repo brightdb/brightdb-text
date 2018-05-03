@@ -3,6 +3,7 @@ module Types exposing (..)
 import Sequence exposing (Sequence, Op, Path)
 import Array.Hamt as Array exposing (Array)
 import Json.Decode as Dec
+import Color exposing (Color)
 
 
 type alias Model =
@@ -11,6 +12,7 @@ type alias Model =
     , text : Sequence Char
     , history : Array (Op Char)
     , cursor : ( Path, Path )
+    , colors : List Color
     }
 
 
@@ -18,6 +20,7 @@ type alias Peer =
     { uri : String
     , connected : Bool
     , version : Int
+    , color : Color
     }
 
 

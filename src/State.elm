@@ -9,6 +9,7 @@ import String
 import Array.Hamt as Array exposing (Array)
 import Sequence exposing (Sequence)
 import Bitwise exposing (shiftLeftBy)
+import Color exposing (Color, hsl)
 
 
 maxInt =
@@ -26,14 +27,19 @@ init instanceUri =
     , text = Sequence.empty
     , history = Array.empty
     , cursor = ( minInt, maxInt )
+    , colors =
+        List.range 0 9
+            |> List.map (toFloat >> (*) 25)
+            |> List.map (\hue -> Color.hsl (degrees hue) 0.7 0.9)
     }
 
 
-initPeer : String -> Peer
-initPeer uri =
+initPeer : String -> Color -> Peer
+initPeer uri color =
     { uri = uri
     , connected = False
     , version = 0
+    , color = color
     }
 
 
@@ -107,10 +113,20 @@ update msg model =
                 ! []
 
         PeerAvailable peer ->
-            { model
-                | peers = initPeer peer :: model.peers
-            }
-                ! []
+            let
+                ( color, colors ) =
+                    case model.colors of
+                        first :: rest ->
+                            ( first, rest ++ [ first ] )
+
+                        _ ->
+                            ( Color.white, model.colors )
+            in
+                { model
+                    | peers = initPeer peer color :: model.peers
+                    , colors = colors
+                }
+                    ! []
 
         RemovePeer peer ->
             { model

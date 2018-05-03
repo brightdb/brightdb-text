@@ -5,6 +5,7 @@ import Html exposing (Html)
 import Html.Attributes as Html
 import Html.Events as Html
 import Color
+import Color.Convert exposing (colorToCssRgba)
 import Style exposing (..)
 import Style.Font as Font
 import Style.Border as Border
@@ -82,7 +83,6 @@ stylesheet =
             [ cursor "pointer"
             , variation Connected
                 [ Font.bold
-                , Color.background connectedColor
                 ]
             ]
         , style Version
@@ -117,8 +117,7 @@ view model =
 
 sidebar model =
     column None
-        [ spacing 10
-        , width <| percent 20
+        [ width <| percent 20
         ]
         (peers model.peers)
 
@@ -231,6 +230,11 @@ peers =
                 row Peer
                     [ onClick (action peer.uri)
                     , vary Connected peer.connected
+                    , inlineStyle <|
+                        if peer.connected then
+                            [ ( "background-color", colorToCssRgba peer.color ) ]
+                        else
+                            []
                     , padding 5
                     ]
                     [ column None
