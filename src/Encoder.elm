@@ -1,8 +1,7 @@
 module Encoder exposing (..)
 
 import Json.Encode exposing (..)
-import Sequence exposing (Op)
-import Value exposing (Operation(..))
+import Sequence exposing (Op, Operation(..), encodeOp)
 import String
 
 
@@ -24,43 +23,27 @@ encodeDisconnectPeer peer =
 
 encodeSubscription : Int -> String -> Value
 encodeSubscription version address =
-    "s" ++ toString version ++ "," ++ address |> string
+    [ ( "s"
+      , [ int version, string address ] |> list
+      )
+    ]
+        |> object
 
 
 encodeData : Value -> String -> Value
 encodeData payload peer =
     [ ( "type", string "data" )
     , ( "peer", string peer )
-    , ( "payload", payload )
+    , ( "payload", encode 0 payload |> string )
     ]
         |> object
 
 
 encodeOps : List (Op Char) -> Value
 encodeOps ops =
-    List.map opToString ops
-        |> List.intersperse "|"
-        |> String.concat
-        |> (++) "o"
-        |> string
-
-
-opToString : Op Char -> String
-opToString op =
-    [ op.origin
-    , op.target
-    , toString op.path
-    , operationToString op.op
+    [ ( "o"
+      , List.map (encodeOp (String.fromChar >> string)) ops
+            |> list
+      )
     ]
-        |> List.intersperse ","
-        |> String.concat
-
-
-operationToString : Operation Char -> String
-operationToString operation =
-    case operation of
-        Insert c ->
-            "i" ++ String.fromChar c
-
-        Remove ->
-            "r"
+        |> object

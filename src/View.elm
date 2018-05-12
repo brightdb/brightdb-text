@@ -14,8 +14,7 @@ import Element exposing (..)
 import Element.Input as Input
 import Element.Attributes exposing (..)
 import Element.Events exposing (..)
-import Sequence exposing (Sequence)
-import Value exposing (Entry(..), Value(..))
+import Sequence exposing (Sequence, Value(..), Entry(..), mvrToList)
 import Dict
 import Tuple exposing (..)
 import Json.Decode as Dec
@@ -180,9 +179,9 @@ entryToSpan model path entry =
                 , drawCursor model.cursor path
                     |> Html.style
                 ]
-                (Dict.values mvr
+                (mvrToList mvr
                     |> List.filterMap
-                        (\v ->
+                        (\( _, v ) ->
                             case v of
                                 Value v ->
                                     Just v
@@ -221,8 +220,8 @@ peerTextStyle instanceUri peers entry =
                     Concurrent mvr ->
                         let
                             colors =
-                                Dict.keys mvr
-                                    |> List.map peerToColor
+                                mvrToList mvr
+                                    |> List.map (first >> peerToColor)
 
                             len =
                                 List.length colors

@@ -7,20 +7,11 @@ import Tuple exposing (..)
 import Char
 import String
 import Array.Hamt as Array exposing (Array)
-import Sequence exposing (Sequence, Path)
-import Value exposing (Value(..), Entry(..))
+import Sequence exposing (Sequence, Path, Value(..), Entry(..), minPath, maxPath, mvrToList)
 import Bitwise exposing (shiftLeftBy)
 import Color exposing (Color, hsl)
 import IntDict
 import Dict
-
-
-maxInt =
-    shiftLeftBy 30 1
-
-
-minInt =
-    0
 
 
 init : String -> Model
@@ -29,7 +20,7 @@ init instanceUri =
     , peers = []
     , text = Sequence.empty
     , history = Array.empty
-    , cursor = ( minInt, maxInt )
+    , cursor = ( minPath, maxPath )
     , colors =
         List.range 0 9
             |> List.map (toFloat >> (*) 25)
@@ -195,7 +186,7 @@ update msg model =
                 start =
                     Sequence.before path model.text
                         |> Maybe.map first
-                        |> Maybe.withDefault minInt
+                        |> Maybe.withDefault minPath
             in
                 { model
                     | cursor = ( start, path )
@@ -207,10 +198,10 @@ update msg model =
                 last =
                     Sequence.last model.text
                         |> Maybe.map first
-                        |> Maybe.withDefault minInt
+                        |> Maybe.withDefault minPath
             in
                 { model
-                    | cursor = ( last, maxInt )
+                    | cursor = ( last, maxPath )
                 }
                     ! []
 
@@ -251,7 +242,7 @@ update msg model =
                         next =
                             Sequence.before (first model.cursor) model.text
                                 |> Maybe.map first
-                                |> Maybe.withDefault minInt
+                                |> Maybe.withDefault minPath
                     in
                         { model
                             | cursor = ( next, first model.cursor )
@@ -263,7 +254,7 @@ update msg model =
                         next =
                             Sequence.after (second model.cursor) model.text
                                 |> Maybe.map first
-                                |> Maybe.withDefault maxInt
+                                |> Maybe.withDefault maxPath
                     in
                         { model
                             | cursor = ( second model.cursor, next )
@@ -271,7 +262,7 @@ update msg model =
                             ! []
 
                 8 ->
-                    case IntDict.get (first model.cursor) model.text of
+                    case Sequence.get (first model.cursor) model.text of
                         Nothing ->
                             model ! []
 
@@ -322,7 +313,7 @@ getTarget entry =
             Just origin
 
         Concurrent mvr ->
-            Dict.toList mvr
+            mvrToList mvr
                 |> List.filter
                     (\( _, value ) ->
                         case value of

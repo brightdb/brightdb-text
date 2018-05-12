@@ -19,6 +19,7 @@ bright.on('message', (target, message) => {
       bright.message('app', {type:'connect', dataspace : dataspace})
       break
     default:
+      console.log(message)
       app.ports.inPort.send(message)
   }
 })
