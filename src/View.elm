@@ -19,6 +19,7 @@ import Dict
 import Tuple exposing (..)
 import Json.Decode as Dec
 import List.Extra
+import String
 
 
 type Styles
@@ -27,6 +28,7 @@ type Styles
     | Navbar
     | Content
     | Title
+    | Name
     | Peer
     | Version
 
@@ -65,6 +67,9 @@ stylesheet =
             [ Font.bold
             , Color.text titleColor
             ]
+        , style Name
+            [ Color.text titleColor
+            ]
         , style Main
             [ Font.typeface [ ubuntuFont, Font.font "Arial", Font.font "Helvetica", Font.sansSerif ]
             ]
@@ -92,6 +97,13 @@ stylesheet =
         ]
 
 
+prettyInstanceUri name =
+    String.split "/" name
+        |> List.drop 1
+        |> List.head
+        |> Maybe.withDefault name
+
+
 view : Model -> Html Msg
 view model =
     Element.viewport stylesheet <|
@@ -103,9 +115,25 @@ view model =
                 [ width <| fill
                 , padding 20
                 ]
-                [ el Title
-                    []
-                    (text model.instanceUri)
+                [ column None
+                    [ width <| percent 50
+                    ]
+                    [ el Title
+                        []
+                        (text "Very Simple Collaborative Text Editor")
+                    ]
+                , column None
+                    [ width <| percent 50
+                    , alignRight
+                    ]
+                    [ el Name
+                        []
+                        (model.instanceUri
+                            |> prettyInstanceUri
+                            |> (\uri -> uri ++ " (You)")
+                            |> text
+                        )
+                    ]
                 ]
             , row None
                 [ width <| fill
@@ -292,7 +320,9 @@ peers =
                     ]
                     [ column None
                         [ width <| percent 90 ]
-                        [ text peer.uri ]
+                        [ prettyInstanceUri peer.uri
+                            |> text
+                        ]
                     , column Version
                         [ width <| percent 10 ]
                         [ text <| toString peer.version ]
