@@ -136,6 +136,45 @@ update msg model =
                 ( text, newOps ) =
                     Sequence.apply ops model.text
 
+                paths =
+                    List.map .path newOps
+
+                minP =
+                    List.foldl
+                        (\path min ->
+                            if Sequence.comparePath path min == LT then
+                                path
+                            else
+                                min
+                        )
+                        maxPath
+                        paths
+
+                maxP =
+                    List.foldl
+                        (\path max ->
+                            if Sequence.comparePath path max == GT then
+                                path
+                            else
+                                max
+                        )
+                        minPath
+                        paths
+
+                cStart =
+                    first model.cursor
+
+                cStartNew =
+                    if Sequence.comparePath cStart maxP == LT && Sequence.comparePath cStart minP == GT then
+                        maxP
+                    else
+                        cStart
+
+                cEndNew =
+                    Sequence.after cStartNew text
+                        |> Maybe.map first
+                        |> Maybe.withDefault maxPath
+
                 cmd =
                     if List.isEmpty newOps then
                         []
@@ -147,6 +186,7 @@ update msg model =
             in
                 { model
                     | text = text
+                    , cursor = ( cStartNew, cEndNew )
                     , history =
                         Array.fromList newOps
                             |> Array.append model.history
