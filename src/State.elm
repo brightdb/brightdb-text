@@ -275,7 +275,7 @@ update msg model =
                             (.uri >> encodeData (encodeOps [ op ]) >> Bright.outPort)
                       )
 
-        KeyUp key ->
+        KeyDown key ->
             case key of
                 37 ->
                     let

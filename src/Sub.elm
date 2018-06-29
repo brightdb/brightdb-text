@@ -9,6 +9,6 @@ import Types exposing (..)
 subscriptions model =
     [ Bright.inPort decodeMessage
     , Keyboard.presses Key
-    , Keyboard.downs KeyUp
+    , Keyboard.downs KeyDown
     ]
         |> Sub.batch
