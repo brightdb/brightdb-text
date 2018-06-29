@@ -264,7 +264,15 @@ entryToSpan model path entry =
 
 
 cursorStyle =
-    ( "border-left", "solid 1px black" )
+    "solid 1px black"
+
+
+cursorStyleLeft =
+    ( "border-left", cursorStyle )
+
+
+cursorStyleRight =
+    ( "border-right", cursorStyle )
 
 
 peerTextStyle instanceUri peers entry =
@@ -318,7 +326,9 @@ peerTextStyle instanceUri peers entry =
 
 drawCursor ( start, end ) path =
     if end == path then
-        [ cursorStyle ]
+        [ cursorStyleLeft, ( "margin-left", "-1px" ) ]
+    else if start == path then
+        [ cursorStyleRight ]
     else
         []
 
@@ -327,7 +337,7 @@ cursorAtEnd ( start, end ) lastPath =
     [ Html.span
         [ Html.style <|
             if lastPath == Nothing || Just start == lastPath then
-                [ cursorStyle ]
+                [ cursorStyleLeft ]
             else
                 []
         ]

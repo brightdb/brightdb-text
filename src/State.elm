@@ -278,28 +278,16 @@ update msg model =
         KeyDown key ->
             case key of
                 37 ->
-                    let
-                        next =
-                            Sequence.before (first model.cursor) model.text
-                                |> Maybe.map first
-                                |> Maybe.withDefault minPath
-                    in
-                        { model
-                            | cursor = ( next, first model.cursor )
-                        }
-                            ! []
+                    { model
+                        | cursor = previousCursor model.text <| first model.cursor
+                    }
+                        ! []
 
                 39 ->
-                    let
-                        next =
-                            Sequence.after (second model.cursor) model.text
-                                |> Maybe.map first
-                                |> Maybe.withDefault maxPath
-                    in
-                        { model
-                            | cursor = ( second model.cursor, next )
-                        }
-                            ! []
+                    { model
+                        | cursor = nextCursor model.text <| second model.cursor
+                    }
+                        ! []
 
                 8 ->
                     case Sequence.get (first model.cursor) model.text of
@@ -311,6 +299,54 @@ update msg model =
 
                 _ ->
                     model ! []
+
+
+isValue : Value a -> Bool
+isValue v =
+    case v of
+        Value _ ->
+            True
+
+        Tomb _ ->
+            False
+
+
+previousCursor : Sequence x -> Path -> ( Path, Path )
+previousCursor sequence cp =
+    case Sequence.before cp sequence of
+        Nothing ->
+            ( minPath, cp )
+
+        Just ( p, Single _ (Value _) ) ->
+            ( p, cp )
+
+        Just ( p, Single _ (Tomb _) ) ->
+            previousCursor sequence p
+
+        Just ( p, Concurrent mvr ) ->
+            if mvrToList mvr |> List.any (second >> isValue) then
+                ( p, cp )
+            else
+                previousCursor sequence p
+
+
+nextCursor : Sequence x -> Path -> ( Path, Path )
+nextCursor sequence cp =
+    case Sequence.after cp sequence of
+        Nothing ->
+            ( cp, maxPath )
+
+        Just ( p, Single _ (Value _) ) ->
+            ( cp, p )
+
+        Just ( p, Single _ (Tomb _) ) ->
+            nextCursor sequence p
+
+        Just ( p, Concurrent mvr ) ->
+            if mvrToList mvr |> List.any (second >> isValue) then
+                ( cp, p )
+            else
+                nextCursor sequence p
 
 
 delete : ( Path, Entry Char ) -> Model -> ( Model, Cmd Msg )
