@@ -27,6 +27,7 @@ type Class
     = ContentFrame
     | SingleChar
     | ConcurrentChar
+    | Space
 
 
 rules =
@@ -35,6 +36,9 @@ rules =
       }
     , { selectors = [ Css.Class SingleChar ]
       , descriptor = [ ( "display", "flex" ), ( "align-items", "center" ) ]
+      }
+    , { selectors = [ Css.Class Space ]
+      , descriptor = [ ( "width", "1ex" ) ]
       }
     , { selectors = [ Css.Class ConcurrentChar ]
       , descriptor = [ ( "display", "flex" ), ( "flex-direction", "column" ) ]
@@ -212,7 +216,13 @@ entryToSpan model path entry =
         Single origin (Value c) ->
             [ Html.div
                 [ Html.onClick <| Click path
-                , stylesheetCss.class SingleChar
+                , SingleChar
+                    :: (if c == ' ' then
+                            [ Space ]
+                        else
+                            []
+                       )
+                    |> stylesheetCss.classes
                 , peerTextStyle model.instanceUri model.peers entry
                 , drawCursor model.cursor path
                     |> Html.style
