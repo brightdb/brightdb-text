@@ -14,7 +14,7 @@ import Element exposing (..)
 import Element.Input as Input
 import Element.Attributes exposing (..)
 import Element.Events exposing (..)
-import Sequence exposing (Sequence, Value(..), Entry(..), mvrToList)
+import Sequence exposing (Sequence, Value(..), TombValue(..), Entry(..), mvrToList)
 import Dict
 import Tuple exposing (..)
 import Json.Decode as Dec
@@ -28,6 +28,7 @@ type Class
     | SingleChar
     | ConcurrentChar
     | Space
+    | Deleted
 
 
 rules =
@@ -43,6 +44,9 @@ rules =
     , { selectors = [ Css.Class ConcurrentChar ]
       , descriptor = [ ( "display", "flex" ), ( "flex-direction", "column" ) ]
       }
+    , { selectors = [ Css.Class Deleted ]
+      , descriptor = [ ( "text-decoration", "line-through" ) ]
+      }
     ]
 
 
@@ -55,6 +59,7 @@ type Styles
     | Main
     | Navbar
     | Content
+    | Config
     | Title
     | Name
     | Peer
@@ -109,6 +114,11 @@ stylesheet =
             ]
         , style Content
             [ Border.right 1
+            , Border.solid
+            , Color.border navbarColor
+            ]
+        , style Config
+            [ Border.top 1
             , Border.solid
             , Color.border navbarColor
             ]
@@ -177,6 +187,35 @@ sidebar model =
         , minWidth <| px 200
         , scrollbars
         ]
+        [ row None
+            [ height <| fill
+            , width <| fill
+            ]
+            [ peersSidebar model
+            ]
+        , row Config
+            [ height <| px 30
+            , width <| fill
+            ]
+            [ el None
+                [ padding 5
+                ]
+                (Input.checkbox None
+                    []
+                    { onChange = always ToggleTombs
+                    , checked = model.showTombs
+                    , label = el None [] (text "show deleted chars")
+                    , options = []
+                    }
+                )
+            ]
+        ]
+
+
+peersSidebar model =
+    column None
+        [ scrollbars
+        ]
         (peers model.peers)
 
 
@@ -211,9 +250,22 @@ foldText model path entry result =
         ++ result
 
 
-entryToSpan model path entry =
-    case entry of
-        Single origin (Value c) ->
+printValue model path entry value =
+    if not model.showTombs && (not <| isValue value) then
+        []
+    else
+        let
+            c =
+                case value of
+                    Value v ->
+                        v
+
+                    Tomb (TombValue v) ->
+                        v
+
+                    Tomb TombUnknown ->
+                        '?'
+        in
             [ Html.div
                 [ Html.onClick <| Click path
                 , SingleChar
@@ -221,6 +273,11 @@ entryToSpan model path entry =
                             [ Space ]
                         else
                             []
+                       )
+                    ++ (if isValue value then
+                            []
+                        else
+                            [ Deleted ]
                        )
                     |> stylesheetCss.classes
                 , peerTextStyle model.instanceUri model.peers entry
@@ -231,6 +288,12 @@ entryToSpan model path entry =
                     |> Html.text
                 ]
             ]
+
+
+entryToSpan model path entry =
+    case entry of
+        Single origin value ->
+            printValue model path entry value
 
         Concurrent mvr ->
             [ Html.div
@@ -249,18 +312,27 @@ entryToSpan model path entry =
                         (\( _, v ) ->
                             case v of
                                 Value v ->
-                                    Just v
+                                    String.fromChar v
+                                        |> Html.text
+                                        |> \t ->
+                                            Html.span [] [ t ]
+                                                |> Just
 
-                                _ ->
-                                    Nothing
+                                Tomb (TombValue v) ->
+                                    String.fromChar v
+                                        |> Html.text
+                                        |> \t ->
+                                            Html.span [ stylesheetCss.class Deleted ] [ t ]
+                                                |> Just
+
+                                Tomb TombUnknown ->
+                                    Html.text "?"
+                                        |> \t ->
+                                            Html.span [ stylesheetCss.class Deleted ] [ t ]
+                                                |> Just
                         )
-                    |> List.map (String.fromChar >> Html.text)
-                    |> List.map (\t -> Html.span [] [ t ])
                 )
             ]
-
-        _ ->
-            []
 
 
 cursorStyle =

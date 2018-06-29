@@ -25,6 +25,7 @@ init instanceUri =
         List.range 0 9
             |> List.map (toFloat >> (*) 25)
             |> List.map (\hue -> Color.hsl (degrees hue) 0.7 0.9)
+    , showTombs = False
     }
 
 
@@ -279,13 +280,13 @@ update msg model =
             case key of
                 37 ->
                     { model
-                        | cursor = previousCursor model.text <| first model.cursor
+                        | cursor = previousCursor model.showTombs model.text <| first model.cursor
                     }
                         ! []
 
                 39 ->
                     { model
-                        | cursor = nextCursor model.text <| second model.cursor
+                        | cursor = nextCursor model.showTombs model.text <| second model.cursor
                     }
                         ! []
 
@@ -300,19 +301,15 @@ update msg model =
                 _ ->
                     model ! []
 
-
-isValue : Value a -> Bool
-isValue v =
-    case v of
-        Value _ ->
-            True
-
-        Tomb _ ->
-            False
+        ToggleTombs ->
+            { model
+                | showTombs = not model.showTombs
+            }
+                ! []
 
 
-previousCursor : Sequence x -> Path -> ( Path, Path )
-previousCursor sequence cp =
+previousCursor : Bool -> Sequence x -> Path -> ( Path, Path )
+previousCursor showTombs sequence cp =
     case Sequence.before cp sequence of
         Nothing ->
             ( minPath, cp )
@@ -321,17 +318,22 @@ previousCursor sequence cp =
             ( p, cp )
 
         Just ( p, Single _ (Tomb _) ) ->
-            previousCursor sequence p
-
-        Just ( p, Concurrent mvr ) ->
-            if mvrToList mvr |> List.any (second >> isValue) then
+            if showTombs then
                 ( p, cp )
             else
-                previousCursor sequence p
+                previousCursor showTombs sequence p
+
+        Just ( p, Concurrent mvr ) ->
+            if showTombs then
+                ( p, cp )
+            else if mvrToList mvr |> List.any (second >> isValue) then
+                ( p, cp )
+            else
+                previousCursor showTombs sequence p
 
 
-nextCursor : Sequence x -> Path -> ( Path, Path )
-nextCursor sequence cp =
+nextCursor : Bool -> Sequence x -> Path -> ( Path, Path )
+nextCursor showTombs sequence cp =
     case Sequence.after cp sequence of
         Nothing ->
             ( cp, maxPath )
@@ -340,13 +342,18 @@ nextCursor sequence cp =
             ( cp, p )
 
         Just ( p, Single _ (Tomb _) ) ->
-            nextCursor sequence p
-
-        Just ( p, Concurrent mvr ) ->
-            if mvrToList mvr |> List.any (second >> isValue) then
+            if showTombs then
                 ( cp, p )
             else
-                nextCursor sequence p
+                nextCursor showTombs sequence p
+
+        Just ( p, Concurrent mvr ) ->
+            if showTombs then
+                ( cp, p )
+            else if mvrToList mvr |> List.any (second >> isValue) then
+                ( cp, p )
+            else
+                nextCursor showTombs sequence p
 
 
 delete : ( Path, Entry Char ) -> Model -> ( Model, Cmd Msg )
@@ -358,7 +365,13 @@ delete ( path, entry ) model =
                     model ! []
 
                 Just next ->
-                    delete next model
+                    if model.showTombs then
+                        { model
+                            | cursor = ( first next, path )
+                        }
+                            ! []
+                    else
+                        delete next model
 
         Just target ->
             let
@@ -371,10 +384,16 @@ delete ( path, entry ) model =
                 history =
                     Array.fromList newOps
                         |> Array.append model.history
+
+                next =
+                    Sequence.before path model.text
+                        |> Maybe.map first
+                        |> Maybe.withDefault minPath
             in
                 { model
                     | text = text
                     , history = history
+                    , cursor = ( next, path )
                 }
                     ! (model.peers
                         |> List.filter (.connected >> (==) True)

@@ -1,6 +1,6 @@
 module Types exposing (..)
 
-import Sequence exposing (Sequence, Op, Path)
+import Sequence exposing (Sequence, Value(..), Op, Path)
 import Array.Hamt as Array exposing (Array)
 import Json.Decode as Dec
 import Color exposing (Color)
@@ -13,6 +13,7 @@ type alias Model =
     , history : Array (Op Char)
     , cursor : ( Path, Path )
     , colors : List Color
+    , showTombs : Bool
     }
 
 
@@ -48,3 +49,14 @@ type Msg
     | ClickEnd
     | Key Int
     | KeyDown Int
+    | ToggleTombs
+
+
+isValue : Value a -> Bool
+isValue v =
+    case v of
+        Value _ ->
+            True
+
+        Tomb _ ->
+            False
