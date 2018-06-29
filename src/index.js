@@ -12,11 +12,11 @@ app.ports.outPort.subscribe(message => {
   bright.message('app', message)
 })
 
-bright.message('app', {type:'register', uri : instanceUri})
+bright.message('app', {type: 'register', uri: instanceUri})
 bright.on('message', (target, message) => {
-  switch(message.type) {
+  switch (message.type) {
     case 'registered':
-      bright.message('app', {type:'connect', dataspace : dataspace})
+      bright.message('app', {type: 'connect', dataspace: dataspace})
       break
     default:
       console.log(message)

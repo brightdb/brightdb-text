@@ -20,6 +20,30 @@ import Tuple exposing (..)
 import Json.Decode as Dec
 import List.Extra
 import String
+import Css
+
+
+type Class
+    = ContentFrame
+    | SingleChar
+    | ConcurrentChar
+
+
+rules =
+    [ { selectors = [ Css.Class ContentFrame ]
+      , descriptor = [ ( "display", "flex" ) ]
+      }
+    , { selectors = [ Css.Class SingleChar ]
+      , descriptor = [ ( "display", "flex" ), ( "align-items", "center" ) ]
+      }
+    , { selectors = [ Css.Class ConcurrentChar ]
+      , descriptor = [ ( "display", "flex" ), ( "flex-direction", "column" ) ]
+      }
+    ]
+
+
+stylesheetCss =
+    Css.stylesheet [] rules
 
 
 type Styles
@@ -155,7 +179,8 @@ sidebar model =
 content model =
     Sequence.foldr (foldText model) [] model.text
         ++ cursorAtEnd model.cursor (Sequence.last model.text |> Maybe.map first)
-        |> Html.div []
+        |> Html.div [ stylesheetCss.class ContentFrame ]
+        |> (\c -> Html.div [] [ Css.style [] stylesheetCss, c ])
         |> Element.html
         |> (\x -> [ x ])
         |> column Content
@@ -185,8 +210,9 @@ foldText model path entry result =
 entryToSpan model path entry =
     case entry of
         Single origin (Value c) ->
-            [ Html.span
+            [ Html.div
                 [ Html.onClick <| Click path
+                , stylesheetCss.class SingleChar
                 , peerTextStyle model.instanceUri model.peers entry
                 , drawCursor model.cursor path
                     |> Html.style
@@ -197,12 +223,13 @@ entryToSpan model path entry =
             ]
 
         Concurrent mvr ->
-            [ Html.span
+            [ Html.div
                 [ Dec.succeed (Click path)
                     |> Html.onWithOptions "click"
                         { stopPropagation = True
                         , preventDefault = False
                         }
+                , stylesheetCss.class ConcurrentChar
                 , peerTextStyle model.instanceUri model.peers entry
                 , drawCursor model.cursor path
                     |> Html.style
@@ -218,6 +245,7 @@ entryToSpan model path entry =
                                     Nothing
                         )
                     |> List.map (String.fromChar >> Html.text)
+                    |> List.map (\t -> Html.span [] [ t ])
                 )
             ]
 
