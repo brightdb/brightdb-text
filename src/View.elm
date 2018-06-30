@@ -42,6 +42,7 @@ rules =
                 , ( "align-items", "center" )
                 , ( "flex-wrap", "wrap" )
                 , ( "font-family", "monospace" )
+                , ( "font-size", "12pt" )
                 ]
           }
         , { selectors = [ Css.Class SingleChar ]
@@ -87,7 +88,11 @@ navbarColor =
 
 
 connectedColor =
-    Color.rgb 233 248 234
+    Color.rgb 0 0 0
+
+
+notConnectedColor =
+    Color.rgba 0 0 0 0.7
 
 
 textColor =
@@ -128,6 +133,7 @@ stylesheet =
             [ Border.right 1
             , Border.solid
             , Color.border navbarColor
+            , cursor "text"
             ]
         , style Config
             [ Border.top 1
@@ -136,8 +142,10 @@ stylesheet =
             ]
         , style Peer
             [ cursor "pointer"
+            , Color.text notConnectedColor
             , variation Connected
                 [ Font.bold
+                , Color.text connectedColor
                 ]
             ]
         , style Version
@@ -451,10 +459,7 @@ peers =
                     [ onClick (action peer.uri)
                     , vary Connected peer.connected
                     , inlineStyle <|
-                        if peer.connected then
-                            [ ( "background-color", colorToCssRgba peer.color ) ]
-                        else
-                            []
+                        [ ( "background-color", colorToCssRgba peer.color ) ]
                     , padding 5
                     ]
                     [ column None

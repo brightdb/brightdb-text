@@ -22,8 +22,8 @@ init instanceUri =
     , history = Array.empty
     , cursor = initCursor instanceUri
     , colors =
-        List.range 0 9
-            |> List.map (toFloat >> (*) 25)
+        List.range 2 11
+            |> List.map (toFloat >> (*) 36)
             |> List.map (\hue -> Color.hsl (degrees hue) 0.7 0.9)
     , showTombs = False
     }
