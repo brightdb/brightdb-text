@@ -34,16 +34,21 @@ type Class
 rules =
     let
         charHeight =
-            ( "height", "1em" )
+            ( "height", "1.1em" )
     in
         [ { selectors = [ Css.Class ContentFrame ]
-          , descriptor = [ ( "display", "flex" ), ( "align-items", "center" ) ]
+          , descriptor =
+                [ ( "display", "flex" )
+                , ( "align-items", "center" )
+                , ( "flex-wrap", "wrap" )
+                , ( "font-family", "monospace" )
+                ]
           }
         , { selectors = [ Css.Class SingleChar ]
           , descriptor = [ ( "display", "flex" ), charHeight ]
           }
         , { selectors = [ Css.Class Space ]
-          , descriptor = [ ( "width", "3pt" ) ]
+          , descriptor = [ ( "width", "1ch" ) ]
           }
         , { selectors = [ Css.Class ConcurrentChar ]
           , descriptor = [ ( "display", "flex" ), ( "flex-direction", "column" ) ]
@@ -222,6 +227,7 @@ sidebar model =
 peersSidebar model =
     column None
         [ scrollbars
+        , width fill
         ]
         (peers model.peers)
 
