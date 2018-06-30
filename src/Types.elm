@@ -11,9 +11,16 @@ type alias Model =
     , peers : List Peer
     , text : Sequence Char
     , history : Array (Op Char)
-    , cursor : ( Path, Path )
+    , cursor : Cursor
     , colors : List Color
     , showTombs : Bool
+    }
+
+
+type alias Cursor =
+    { left : Path
+    , right : Path
+    , target : String -- delete target when in an MVR
     }
 
 
@@ -45,7 +52,7 @@ type Msg
     | ConnectPeer String
     | Data String Payload
     | Error String
-    | Click Path
+    | Click Path String
     | ClickEnd
     | Key Int
     | KeyDown Int

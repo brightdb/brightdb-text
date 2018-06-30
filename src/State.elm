@@ -20,12 +20,20 @@ init instanceUri =
     , peers = []
     , text = Sequence.empty
     , history = Array.empty
-    , cursor = ( minPath, maxPath )
+    , cursor = initCursor instanceUri
     , colors =
         List.range 0 9
             |> List.map (toFloat >> (*) 25)
             |> List.map (\hue -> Color.hsl (degrees hue) 0.7 0.9)
     , showTombs = False
+    }
+
+
+initCursor : String -> Cursor
+initCursor origin =
+    { left = minPath
+    , right = maxPath
+    , target = origin
     }
 
 
@@ -163,7 +171,7 @@ update msg model =
                         paths
 
                 cStart =
-                    first model.cursor
+                    model.cursor.left
 
                 cStartNew =
                     if Sequence.comparePath cStart maxP == LT && Sequence.comparePath cStart minP == GT then
@@ -187,7 +195,8 @@ update msg model =
             in
                 { model
                     | text = text
-                    , cursor = ( cStartNew, cEndNew )
+                    , cursor =
+                        updateCursor model.cursor cStartNew cEndNew model.cursor.target
                     , history =
                         Array.fromList newOps
                             |> Array.append model.history
@@ -222,34 +231,76 @@ update msg model =
                 model
                     ! cmd
 
-        Click path ->
-            let
-                start =
-                    Sequence.before path model.text
-                        |> Maybe.map first
-                        |> Maybe.withDefault minPath
-            in
-                { model
-                    | cursor = ( start, path )
-                }
-                    ! []
+        Click path target ->
+            { model
+                | cursor =
+                    case Sequence.before path model.text of
+                        Nothing ->
+                            updateCursor model.cursor minPath path model.instanceUri
+
+                        Just ( next, Single origin _ ) ->
+                            updateCursor model.cursor next path origin
+
+                        Just ( next, Concurrent mvr ) ->
+                            let
+                                list =
+                                    mvrToList mvr |> filterTombs model.showTombs
+                            in
+                                case Dict.fromList list |> Dict.get target of
+                                    Nothing ->
+                                        case List.head list of
+                                            Nothing ->
+                                                updateCursor model.cursor next path model.instanceUri
+
+                                            Just ( head, _ ) ->
+                                                updateCursor model.cursor next path head
+
+                                    Just _ ->
+                                        updateCursor model.cursor next path target
+            }
+                ! []
 
         ClickEnd ->
-            let
-                last =
-                    Sequence.last model.text
-                        |> Maybe.map first
-                        |> Maybe.withDefault minPath
-            in
-                { model
-                    | cursor = ( last, maxPath )
-                }
-                    ! []
+            { model
+                | cursor =
+                    case Sequence.last model.text of
+                        Nothing ->
+                            updateCursor model.cursor minPath maxPath model.instanceUri
+
+                        Just ( next, Single origin (Value _) ) ->
+                            updateCursor model.cursor next maxPath origin
+
+                        Just ( next, Single origin (Tomb _) ) ->
+                            if model.showTombs then
+                                updateCursor model.cursor next maxPath origin
+                            else
+                                updateCursor model.cursor next maxPath origin
+                                    |> moveCursorLeft model.instanceUri model.showTombs model.text
+
+                        Just ( next, Concurrent mvr ) ->
+                            let
+                                list =
+                                    mvrToList mvr |> filterTombs model.showTombs
+                            in
+                                case Dict.fromList list |> Dict.get model.instanceUri of
+                                    Just _ ->
+                                        updateCursor model.cursor next maxPath model.instanceUri
+
+                                    Nothing ->
+                                        case List.head list of
+                                            Nothing ->
+                                                updateCursor model.cursor next maxPath model.instanceUri
+                                                    |> moveCursorLeft model.instanceUri model.showTombs model.text
+
+                                            Just ( head, _ ) ->
+                                                updateCursor model.cursor next maxPath head
+            }
+                ! []
 
         Key key ->
             let
                 path =
-                    Sequence.alloc (first model.cursor) (second model.cursor)
+                    Sequence.alloc model.cursor.left model.cursor.right
 
                 op =
                     Char.fromCode key
@@ -263,7 +314,7 @@ update msg model =
                         |> Array.append model.history
 
                 cursor =
-                    ( path, second model.cursor )
+                    updateCursor model.cursor path model.cursor.right model.cursor.target
             in
                 { model
                     | text = text
@@ -280,23 +331,87 @@ update msg model =
             case key of
                 37 ->
                     { model
-                        | cursor = previousCursor model.showTombs model.text <| first model.cursor
+                        | cursor = moveCursorLeft model.instanceUri model.showTombs model.text model.cursor
                     }
                         ! []
 
                 39 ->
                     { model
-                        | cursor = nextCursor model.showTombs model.text <| second model.cursor
+                        | cursor = moveCursorRight model.instanceUri model.showTombs model.text model.cursor
                     }
                         ! []
 
+                38 ->
+                    case Sequence.get model.cursor.left model.text of
+                        Nothing ->
+                            model ! []
+
+                        Just (Single _ _) ->
+                            model ! []
+
+                        Just (Concurrent mvr) ->
+                            mvrToList mvr
+                                |> filterTombs model.showTombs
+                                |> List.foldl
+                                    (\( current, _ ) result ->
+                                        { result
+                                            | previous = Just current
+                                            , found =
+                                                if current == model.cursor.target then
+                                                    case result.previous of
+                                                        Nothing ->
+                                                            current
+
+                                                        Just previous ->
+                                                            previous
+                                                else
+                                                    result.found
+                                        }
+                                    )
+                                    { found = model.cursor.target, previous = Nothing }
+                                |> .found
+                                |> updateCursor model.cursor model.cursor.left model.cursor.right
+                                |> \cursor -> { model | cursor = cursor } ! []
+
+                40 ->
+                    case Sequence.get model.cursor.left model.text of
+                        Nothing ->
+                            model ! []
+
+                        Just (Single _ _) ->
+                            model ! []
+
+                        Just (Concurrent mvr) ->
+                            mvrToList mvr
+                                |> filterTombs model.showTombs
+                                |> List.foldl
+                                    (\( current, _ ) result ->
+                                        { result
+                                            | previous = Just current
+                                            , found =
+                                                case result.previous of
+                                                    Just previous ->
+                                                        if previous == model.cursor.target then
+                                                            current
+                                                        else
+                                                            previous
+
+                                                    Nothing ->
+                                                        result.found
+                                        }
+                                    )
+                                    { found = model.cursor.target, previous = Nothing }
+                                |> .found
+                                |> updateCursor model.cursor model.cursor.left model.cursor.right
+                                |> \cursor -> { model | cursor = cursor } ! []
+
                 8 ->
-                    case Sequence.get (first model.cursor) model.text of
+                    case Sequence.get model.cursor.left model.text of
                         Nothing ->
                             model ! []
 
                         Just entry ->
-                            delete ( first model.cursor, entry ) model
+                            delete model.cursor.left model.cursor.target entry model
 
                 _ ->
                     model ! []
@@ -308,98 +423,195 @@ update msg model =
                 ! []
 
 
-previousCursor : Bool -> Sequence x -> Path -> ( Path, Path )
-previousCursor showTombs sequence cp =
-    case Sequence.before cp sequence of
+filterTombs : Bool -> List ( String, Value a ) -> List ( String, Value a )
+filterTombs showTombs =
+    List.filter
+        (\( _, value ) ->
+            case value of
+                Value v ->
+                    True
+
+                Tomb _ ->
+                    showTombs
+        )
+
+
+moveCursorLeft : String -> Bool -> Sequence x -> Cursor -> Cursor
+moveCursorLeft instanceUri showTombs text cursor =
+    if cursor.left == minPath then
+        cursor
+    else
+        case Sequence.before cursor.left text of
+            Nothing ->
+                updateCursor cursor minPath cursor.left cursor.target
+
+            Just ( next, Single origin (Value _) ) ->
+                updateCursor cursor next cursor.left origin
+
+            Just ( next, Single origin (Tomb _) ) ->
+                if showTombs then
+                    updateCursor cursor next cursor.left origin
+                else
+                    updateCursor cursor next cursor.left origin
+                        |> moveCursorLeft instanceUri showTombs text
+
+            Just ( next, Concurrent mvr ) ->
+                let
+                    list =
+                        mvrToList mvr |> filterTombs showTombs
+                in
+                    case Dict.fromList list |> Dict.get cursor.target of
+                        Just _ ->
+                            updateCursor cursor next cursor.left cursor.target
+
+                        Nothing ->
+                            case List.head list of
+                                Nothing ->
+                                    updateCursor cursor next cursor.left instanceUri
+                                        |> moveCursorLeft instanceUri showTombs text
+
+                                Just ( head, _ ) ->
+                                    updateCursor cursor next cursor.left head
+
+
+updateCursor : Cursor -> Path -> Path -> String -> Cursor
+updateCursor cursor left right target =
+    { cursor
+        | left = left
+        , right = right
+        , target = target
+    }
+
+
+findNextOriginBefore : String -> Bool -> Path -> Sequence x -> String
+findNextOriginBefore target showTombs path text =
+    case Sequence.before path text of
         Nothing ->
-            ( minPath, cp )
+            target
 
-        Just ( p, Single _ (Value _) ) ->
-            ( p, cp )
+        Just ( next, Single origin (Value _) ) ->
+            origin
 
-        Just ( p, Single _ (Tomb _) ) ->
+        Just ( next, Single origin (Tomb _) ) ->
             if showTombs then
-                ( p, cp )
+                origin
             else
-                previousCursor showTombs sequence p
+                findNextOriginBefore target showTombs next text
 
-        Just ( p, Concurrent mvr ) ->
-            if showTombs then
-                ( p, cp )
-            else if mvrToList mvr |> List.any (second >> isValue) then
-                ( p, cp )
-            else
-                previousCursor showTombs sequence p
+        Just ( next, Concurrent mvr ) ->
+            let
+                list =
+                    mvrToList mvr
+                        |> filterTombs showTombs
+            in
+                case Dict.fromList list |> Dict.get target of
+                    Nothing ->
+                        case List.head list of
+                            Nothing ->
+                                findNextOriginBefore target showTombs next text
 
+                            Just head ->
+                                first head
 
-nextCursor : Bool -> Sequence x -> Path -> ( Path, Path )
-nextCursor showTombs sequence cp =
-    case Sequence.after cp sequence of
-        Nothing ->
-            ( cp, maxPath )
-
-        Just ( p, Single _ (Value _) ) ->
-            ( cp, p )
-
-        Just ( p, Single _ (Tomb _) ) ->
-            if showTombs then
-                ( cp, p )
-            else
-                nextCursor showTombs sequence p
-
-        Just ( p, Concurrent mvr ) ->
-            if showTombs then
-                ( cp, p )
-            else if mvrToList mvr |> List.any (second >> isValue) then
-                ( cp, p )
-            else
-                nextCursor showTombs sequence p
+                    Just _ ->
+                        target
 
 
-delete : ( Path, Entry Char ) -> Model -> ( Model, Cmd Msg )
-delete ( path, entry ) model =
-    case getTarget entry of
-        Nothing ->
+moveCursorRight : String -> Bool -> Sequence x -> Cursor -> Cursor
+moveCursorRight instanceUri showTombs text cursor =
+    if cursor.right == maxPath then
+        cursor
+    else
+        case Sequence.after cursor.right text of
+            Nothing ->
+                findNextOriginBefore cursor.target showTombs maxPath text
+                    |> updateCursor cursor cursor.right maxPath
+
+            Just ( next, Single origin (Value _) ) ->
+                findNextOriginBefore cursor.target showTombs next text
+                    |> updateCursor cursor cursor.right next
+
+            Just ( next, Single origin (Tomb _) ) ->
+                if showTombs then
+                    findNextOriginBefore cursor.target showTombs next text
+                        |> updateCursor cursor cursor.right next
+                else
+                    updateCursor cursor cursor.right next origin
+                        |> moveCursorRight instanceUri showTombs text
+                        |> (\cursor ->
+                                findNextOriginBefore cursor.target showTombs cursor.right text
+                                    |> updateCursor cursor cursor.left cursor.right
+                           )
+
+            Just ( next, Concurrent mvr ) ->
+                let
+                    list =
+                        mvrToList mvr |> filterTombs showTombs
+                in
+                    if List.isEmpty list then
+                        updateCursor cursor cursor.right next cursor.target
+                            |> moveCursorRight instanceUri showTombs text
+                            |> (\cursor ->
+                                    findNextOriginBefore cursor.target showTombs cursor.right text
+                                        |> updateCursor cursor cursor.left cursor.right
+                               )
+                    else
+                        findNextOriginBefore cursor.target showTombs next text
+                            |> updateCursor cursor cursor.right next
+
+
+delete : Path -> String -> Entry Char -> Model -> ( Model, Cmd Msg )
+delete path target entry model =
+    case entry of
+        Single target (Tomb _) ->
             case Sequence.before path model.text of
                 Nothing ->
                     model ! []
 
-                Just next ->
+                Just ( nextPath, nextEntry ) ->
                     if model.showTombs then
                         { model
-                            | cursor = ( first next, path )
+                            | cursor = updateCursor model.cursor nextPath path model.cursor.target
                         }
                             ! []
                     else
-                        delete next model
+                        delete nextPath target nextEntry model
 
-        Just target ->
-            let
-                op =
-                    Sequence.createRemove model.instanceUri target path
+        Single target (Value _) ->
+            deleteThis model target path
 
-                ( text, newOps ) =
-                    Sequence.apply [ op ] model.text
+        Concurrent mvr ->
+            deleteThis model target path
 
-                history =
-                    Array.fromList newOps
-                        |> Array.append model.history
 
-                next =
-                    Sequence.before path model.text
-                        |> Maybe.map first
-                        |> Maybe.withDefault minPath
-            in
-                { model
-                    | text = text
-                    , history = history
-                    , cursor = ( next, path )
-                }
-                    ! (model.peers
-                        |> List.filter (.connected >> (==) True)
-                        |> List.map
-                            (.uri >> encodeData (encodeOps [ op ]) >> Bright.outPort)
-                      )
+deleteThis : Model -> String -> Path -> ( Model, Cmd Msg )
+deleteThis model target path =
+    let
+        op =
+            Sequence.createRemove model.instanceUri target path
+
+        ( text, newOps ) =
+            Sequence.apply [ op ] model.text
+
+        history =
+            Array.fromList newOps
+                |> Array.append model.history
+
+        next =
+            Sequence.before path model.text
+                |> Maybe.map first
+                |> Maybe.withDefault minPath
+    in
+        { model
+            | text = text
+            , history = history
+            , cursor = updateCursor model.cursor next path target
+        }
+            ! (model.peers
+                |> List.filter (.connected >> (==) True)
+                |> List.map
+                    (.uri >> encodeData (encodeOps [ op ]) >> Bright.outPort)
+              )
 
 
 getTarget entry =
