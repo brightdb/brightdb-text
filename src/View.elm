@@ -242,7 +242,7 @@ peersSidebar model =
 
 content model =
     Sequence.foldr (foldText model) [] model.text
-        ++ cursorAtEnd model.cursor (Sequence.last model.text |> Maybe.map first)
+        ++ cursorAtEnd model.blink model.cursor (Sequence.last model.text |> Maybe.map first)
         |> Html.div [ stylesheetCss.class ContentFrame ]
         |> (\c -> Html.div [] [ Css.style [] stylesheetCss, c ])
         |> Element.html
@@ -307,7 +307,7 @@ printValue model path value origin =
                        )
                     |> stylesheetCss.classes
                 , peerTextStyle model.instanceUri model.peers origin
-                , drawCursor model.cursor path origin
+                , drawCursor model.blink model.cursor path origin
                     |> Html.style
                 ]
                 [ String.fromChar v
@@ -334,7 +334,7 @@ entryToSpan model path entry =
                             |> Html.text
                             |> \t ->
                                 Html.span
-                                    [ drawCursor model.cursor path target
+                                    [ drawCursor model.blink model.cursor path target
                                         |> Html.style
                                     , Dec.succeed (Click path target)
                                         |> Html.onWithOptions "click"
@@ -355,16 +355,21 @@ entryToSpan model path entry =
                 |> \x -> [ x ]
 
 
-cursorStyle =
-    "solid 1px black"
+cursorStyle blink =
+    "solid 1px "
+        ++ (if blink then
+                "black"
+            else
+                "rgba(0,0,0,0)"
+           )
 
 
-cursorStyleLeft =
-    ( "border-left", cursorStyle )
+cursorStyleLeft blink =
+    ( "border-left", cursorStyle blink )
 
 
-cursorStyleRight =
-    ( "border-right", cursorStyle )
+cursorStyleRight blink =
+    ( "border-right", cursorStyle blink )
 
 
 peerToColor instanceUri peers origin =
@@ -421,22 +426,22 @@ peerTextStyleGradient instanceUri peers entry =
         ]
 
 
-drawCursor { left, right, target } path origin =
+drawCursor blink { left, right, target } path origin =
     if target /= origin then
         []
     else if right == path then
-        [ cursorStyleLeft, ( "margin-left", "-1px" ) ]
+        [ cursorStyleLeft blink, ( "margin-left", "-1px" ) ]
     else if left == path then
-        [ cursorStyleRight ]
+        [ cursorStyleRight blink ]
     else
         []
 
 
-cursorAtEnd { left, right } lastPath =
+cursorAtEnd blink { left, right } lastPath =
     [ Html.span
         [ Html.style <|
             if lastPath == Nothing || Just left == lastPath then
-                [ cursorStyleLeft ]
+                [ cursorStyleLeft blink ]
             else
                 []
         ]

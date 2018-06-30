@@ -4,6 +4,7 @@ import Sequence exposing (Sequence, Value(..), Op, Path)
 import Array.Hamt as Array exposing (Array)
 import Json.Decode as Dec
 import Color exposing (Color)
+import Time exposing (Time)
 
 
 type alias Model =
@@ -14,6 +15,7 @@ type alias Model =
     , cursor : Cursor
     , colors : List Color
     , showTombs : Bool
+    , blink : Bool
     }
 
 
@@ -57,6 +59,7 @@ type Msg
     | Key Int
     | KeyDown Int
     | ToggleTombs
+    | Blink
 
 
 isValue : Value a -> Bool

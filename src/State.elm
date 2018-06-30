@@ -26,6 +26,7 @@ init instanceUri =
             |> List.map (toFloat >> (*) 36)
             |> List.map (\hue -> Color.hsl (degrees hue) 0.7 0.9)
     , showTombs = False
+    , blink = True
     }
 
 
@@ -419,6 +420,12 @@ update msg model =
         ToggleTombs ->
             { model
                 | showTombs = not model.showTombs
+            }
+                ! []
+
+        Blink ->
+            { model
+                | blink = not model.blink
             }
                 ! []
 
