@@ -23,7 +23,7 @@ init instanceUri =
     , cursor = initCursor instanceUri
     , colors =
         List.range 2 11
-            |> List.map (toFloat >> (*) 36)
+            |> List.map (toFloat >> (*) 100)
             |> List.map (\hue -> Color.hsl (degrees hue) 0.7 0.9)
     , showTombs = False
     , blink = True

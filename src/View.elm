@@ -188,7 +188,6 @@ view model =
                         []
                         (model.instanceUri
                             |> prettyInstanceUri
-                            |> (\uri -> uri ++ " (You)")
                             |> text
                         )
                     ]
@@ -233,11 +232,16 @@ sidebar model =
 
 
 peersSidebar model =
-    column None
-        [ scrollbars
-        , width fill
-        ]
-        (peers model.peers)
+    (if List.isEmpty model.peers then
+        empty
+     else
+        row Peer [ padding 5 ] [ text "Peers (click to connect):" ]
+    )
+        :: peers model.peers
+        |> column None
+            [ scrollbars
+            , width fill
+            ]
 
 
 content model =
